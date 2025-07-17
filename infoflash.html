@@ -369,6 +369,11 @@
                 <div class="news-content">
                     Hemos incorporado tecnología de última generación para exámenes más precisos y rápidos. Nuestro nuevo autorefractómetro digital proporciona mediciones exactas en segundos.
                 </div>
+                <div class="news-actions">
+                    <button class="btn-share-whatsapp" onclick="compartirNoticiaIndividual('Nuevo Equipo de Examen Digital Disponible', '#', 'Hemos incorporado tecnología de última generación para exámenes más precisos y rápidos.')">
+                        📱 Compartir
+                    </button>
+                </div>
             </div>
 
             <div class="news-item">
@@ -377,6 +382,11 @@
                 <div class="news-content">
                     Recibimos más de 50 modelos nuevos de monturas de las mejores marcas internacionales. Desde diseños clásicos hasta las últimas tendencias de moda.
                 </div>
+                <div class="news-actions">
+                    <button class="btn-share-whatsapp" onclick="compartirNoticiaIndividual('Llegada de Nueva Colección de Monturas', '#', 'Recibimos más de 50 modelos nuevos de monturas de las mejores marcas internacionales.')">
+                        📱 Compartir
+                    </button>
+                </div>
             </div>
 
             <div class="news-item">
@@ -384,6 +394,11 @@
                 <div class="news-title">Campaña de Exámenes Visuales Gratuitos</div>
                 <div class="news-content">
                     Durante todo el mes de julio, ofrecemos exámenes visuales gratuitos para estudiantes y personas mayores de 60 años. Una oportunidad única de cuidar su salud visual.
+                </div>
+                <div class="news-actions">
+                    <button class="btn-share-whatsapp" onclick="compartirNoticiaIndividual('Campaña de Exámenes Visuales Gratuitos', '#', 'Durante todo el mes de julio, ofrecemos exámenes visuales gratuitos para estudiantes y personas mayores de 60 años.')">
+                        📱 Compartir
+                    </button>
                 </div>
             </div>
         </div>
@@ -411,6 +426,8 @@
     </div>
 
     <script>
+        console.log('🚀 InfoFlash URBANA VISION iniciando...');
+
         // Configuración mejorada de APIs de noticias
         const NEWS_SOURCES = [
             {
@@ -450,6 +467,7 @@
         }
 
         async function cargarNoticias() {
+            console.log('🔄 Iniciando carga de noticias...');
             const loadingElement = document.getElementById('loadingNews');
             const errorElement = document.getElementById('errorNews');
             const containerElement = document.getElementById('newsContainer');
@@ -465,6 +483,7 @@
             const tiempoCache = 30 * 60 * 1000; // 30 minutos
             
             if (noticiasCache.length > 0 && (ahora - parseInt(ultimaActualizacion)) < tiempoCache) {
+                console.log('📄 Usando noticias del cache');
                 loadingElement.style.display = 'none';
                 mostrarNoticias(noticiasCache, 'cache');
                 return;
@@ -484,6 +503,7 @@
                         apiStatusElement.innerHTML = '✅ Conectado a NewsAPI';
                         apiStatusElement.className = 'api-status api-working';
                         apiStatusElement.style.display = 'block';
+                        console.log('✅ NewsAPI funcionó');
                     }
                 } catch (error) {
                     console.log('❌ NewsAPI falló:', error.message);
@@ -500,6 +520,7 @@
                             apiStatusElement.innerHTML = '⚠️ Usando fuentes RSS alternativas';
                             apiStatusElement.className = 'api-status api-fallback';
                             apiStatusElement.style.display = 'block';
+                            console.log('✅ RSS funcionó');
                         }
                     } catch (error) {
                         console.log('❌ RSS también falló:', error.message);
@@ -518,6 +539,7 @@
                     mostrarNoticias(todasNoticias, fuenteExitosa);
                 } else {
                     // Mostrar noticias de respaldo
+                    console.log('⚠️ Usando noticias de respaldo');
                     errorElement.style.display = 'block';
                     setTimeout(() => {
                         mostrarNoticiasRespaldo();
@@ -528,7 +550,7 @@
                 }
 
             } catch (error) {
-                console.error('Error general cargando noticias:', error);
+                console.error('❌ Error general cargando noticias:', error);
                 loadingElement.style.display = 'none';
                 errorElement.style.display = 'block';
                 setTimeout(mostrarNoticiasRespaldo, 3000);
@@ -737,6 +759,7 @@
                         </div>
                     </div>
                 `;
+            });
 
             containerElement.innerHTML = newsHTML;
             document.getElementById('errorNews').style.display = 'none';
@@ -758,6 +781,7 @@
             
             const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(mensaje)}`;
             window.open(whatsappUrl, '_blank');
+            console.log('📱 WhatsApp compartido:', decodedTitle);
         }
 
         function abrirNoticia(url, titulo) {
@@ -840,13 +864,14 @@
 
         // Inicializar
         document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚀 Iniciando InfoFlash URBANA VISION...');
             actualizarFechaHora();
             setInterval(actualizarFechaHora, 60000); // Actualizar cada minuto
             
-            // Forzar carga inicial de noticias
-            setTimeout(cargarNoticias, 1000);
-            // Actualizar noticias cada 5 minutos
-            setInterval(cargarNoticias, 300000);
+            // Forzar carga inicial de noticias con delay
+            setTimeout(cargarNoticias, 2000);
+            // Actualizar noticias cada 3 minutos para testing
+            setInterval(cargarNoticias, 180000);
         });
 
         console.log('✅ InfoFlash URBANA VISION con sistema robusto de noticias cargado correctamente');
