@@ -300,6 +300,11 @@
             color: #f59e0b;
         }
 
+        .api-error {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+        }
+
         @media (max-width: 768px) {
             .social-share {
                 flex-direction: column;
@@ -315,7 +320,7 @@
 </head>
 <body>
     <a href="./" class="back-btn">🏠 Volver al Sistema</a>
-    <button onclick="cargarNoticias()" class="refresh-btn">🔄 Actualizar</button>
+    <button onclick="forzarActualizacion()" class="refresh-btn">🔄 Actualizar</button>
 
     <div class="container">
         <div class="header">
@@ -340,11 +345,11 @@
             <h2>🌍 Noticias Mundiales en Tiempo Real</h2>
             <div id="apiStatus" class="api-status" style="display: none;"></div>
             <div id="loadingNews" class="loading">
-                <div>📡 Cargando noticias internacionales...</div>
-                <div style="margin-top: 10px; font-size: 14px;">Múltiples fuentes de noticias</div>
+                <div>📡 Conectando con NewsAPI...</div>
+                <div style="margin-top: 10px; font-size: 14px;">Cargando noticias internacionales</div>
             </div>
             <div id="errorNews" class="error" style="display: none;">
-                ❌ Conectando a fuentes alternativas de noticias...
+                ❌ Error de conexión. Probando fuentes alternativas...
             </div>
             <div id="newsContainer"></div>
         </div>
@@ -426,27 +431,13 @@
     </div>
 
     <script>
-        console.log('🚀 InfoFlash URBANA VISION iniciando...');
+        console.log('🚀 InfoFlash URBANA VISION - Versión Definitiva iniciando...');
 
-        // Configuración mejorada de APIs de noticias
-        const NEWS_SOURCES = [
-            {
-                name: 'NewsAPI',
-                baseUrl: 'https://newsapi.org/v2/top-headlines',
-                apiKey: 'a004ca8cb8a14598a41d63adf36ffcbf'
-            },
-            {
-                name: 'RSS Proxy',
-                baseUrl: 'https://api.rss2json.com/v1/api.json',
-                rssFeeds: [
-                    'https://feeds.bbci.co.uk/news/world/rss.xml',
-                    'https://feeds.reuters.com/reuters/topNews',
-                    'https://rss.cnn.com/rss/edition.rss'
-                ]
-            }
-        ];
+        // Configuración de NewsAPI PAGADA
+        const NEWS_API_KEY = 'a004ca8cb8a14598a41d63adf36ffcbf';
+        const NEWS_API_BASE = 'https://newsapi.org/v2';
 
-        // Cache de noticias
+        // Cache de noticias (separado de Nvision)
         let noticiasCache = JSON.parse(localStorage.getItem('urbana_noticias_cache') || '[]');
         let ultimaActualizacion = localStorage.getItem('urbana_ultima_actualizacion') || '0';
         
@@ -467,7 +458,7 @@
         }
 
         async function cargarNoticias() {
-            console.log('🔄 Iniciando carga de noticias...');
+            console.log('🔄 Iniciando carga de noticias con API pagada...');
             const loadingElement = document.getElementById('loadingNews');
             const errorElement = document.getElementById('errorNews');
             const containerElement = document.getElementById('newsContainer');
@@ -478,9 +469,9 @@
             apiStatusElement.style.display = 'none';
             containerElement.innerHTML = '';
 
-            // Verificar si tenemos cache reciente (menos de 30 minutos)
+            // Verificar cache (15 minutos para API pagada)
             const ahora = Date.now();
-            const tiempoCache = 30 * 60 * 1000; // 30 minutos
+            const tiempoCache = 15 * 60 * 1000; // 15 minutos
             
             if (noticiasCache.length > 0 && (ahora - parseInt(ultimaActualizacion)) < tiempoCache) {
                 console.log('📄 Usando noticias del cache');
@@ -491,146 +482,106 @@
 
             try {
                 let todasNoticias = [];
-                let fuenteExitosa = null;
 
-                // Intentar con NewsAPI primero
-                try {
-                    console.log('🔄 Intentando cargar desde NewsAPI...');
-                    const noticiasNewsAPI = await cargarDesdeNewsAPI();
-                    if (noticiasNewsAPI.length > 0) {
-                        todasNoticias = noticiasNewsAPI;
-                        fuenteExitosa = 'NewsAPI';
-                        apiStatusElement.innerHTML = '✅ Conectado a NewsAPI';
-                        apiStatusElement.className = 'api-status api-working';
-                        apiStatusElement.style.display = 'block';
-                        console.log('✅ NewsAPI funcionó');
-                    }
-                } catch (error) {
-                    console.log('❌ NewsAPI falló:', error.message);
-                }
+                // CATEGORÍAS ESPECÍFICAS con tu API pagada
+                const categorias = [
+                    { categoria: 'entertainment', pais: 'us', limite: 5 }, // FARÁNDULA
+                    { categoria: 'general', pais: 'us', limite: 5 },       // NOTICIAS GENERALES
+                    { categoria: 'sports', pais: 'us', limite: 3 },        // DEPORTES
+                    { categoria: 'health', pais: 'us', limite: 3 },        // SALUD
+                    { categoria: 'technology', pais: 'us', limite: 2 }     // TECNOLOGÍA
+                ];
 
-                // Si NewsAPI falla, intentar con RSS
-                if (todasNoticias.length === 0) {
+                console.log('🌍 Cargando noticias por categorías...');
+
+                for (const cat of categorias) {
                     try {
-                        console.log('🔄 Intentando cargar desde RSS...');
-                        const noticiasRSS = await cargarDesdeRSS();
-                        if (noticiasRSS.length > 0) {
-                            todasNoticias = noticiasRSS;
-                            fuenteExitosa = 'RSS Feeds';
-                            apiStatusElement.innerHTML = '⚠️ Usando fuentes RSS alternativas';
-                            apiStatusElement.className = 'api-status api-fallback';
-                            apiStatusElement.style.display = 'block';
-                            console.log('✅ RSS funcionó');
+                        const url = `${NEWS_API_BASE}/top-headlines?category=${cat.categoria}&country=${cat.pais}&pageSize=${cat.limite}&apiKey=${NEWS_API_KEY}`;
+                        console.log(`📡 Cargando ${cat.categoria}...`);
+                        
+                        const response = await fetch(url, {
+                            method: 'GET',
+                            headers: {
+                                'Accept': 'application/json',
+                                'User-Agent': 'InfoFlash/1.0'
+                            }
+                        });
+                        
+                        if (!response.ok) {
+                            console.error(`❌ Error ${cat.categoria}: ${response.status}`);
+                            continue;
                         }
+                        
+                        const data = await response.json();
+                        console.log(`✅ ${cat.categoria}: ${data.articles?.length || 0} noticias`);
+                        
+                        if (data.status === 'ok' && data.articles && data.articles.length > 0) {
+                            // Filtrar y agregar categoría
+                            const noticiasCategoria = data.articles
+                                .filter(article => article.title && article.description && article.title !== '[Removed]')
+                                .map(article => ({
+                                    ...article,
+                                    category: cat.categoria
+                                }));
+                            todasNoticias = [...todasNoticias, ...noticiasCategoria];
+                        }
+                        
+                        // Delay entre requests para evitar rate limit
+                        await new Promise(resolve => setTimeout(resolve, 200));
+                        
                     } catch (error) {
-                        console.log('❌ RSS también falló:', error.message);
+                        console.error(`❌ Error cargando ${cat.categoria}:`, error);
                     }
                 }
 
                 loadingElement.style.display = 'none';
 
                 if (todasNoticias.length > 0) {
+                    console.log(`✅ Total noticias cargadas: ${todasNoticias.length}`);
+                    
                     // Guardar en cache
                     noticiasCache = todasNoticias;
                     ultimaActualizacion = ahora.toString();
                     localStorage.setItem('urbana_noticias_cache', JSON.stringify(noticiasCache));
                     localStorage.setItem('urbana_ultima_actualizacion', ultimaActualizacion);
                     
-                    mostrarNoticias(todasNoticias, fuenteExitosa);
+                    mostrarNoticias(todasNoticias, 'NewsAPI Pagada');
+                    
+                    apiStatusElement.innerHTML = `✅ NewsAPI Activa - ${todasNoticias.length} noticias cargadas`;
+                    apiStatusElement.className = 'api-status api-working';
+                    apiStatusElement.style.display = 'block';
                 } else {
-                    // Mostrar noticias de respaldo
-                    console.log('⚠️ Usando noticias de respaldo');
-                    errorElement.style.display = 'block';
-                    setTimeout(() => {
-                        mostrarNoticiasRespaldo();
-                        apiStatusElement.innerHTML = '🔄 Usando noticias locales - Intente actualizar más tarde';
-                        apiStatusElement.className = 'api-status api-fallback';
-                        apiStatusElement.style.display = 'block';
-                    }, 2000);
+                    console.log('⚠️ Sin noticias, usando respaldo');
+                    throw new Error('No se obtuvieron noticias de la API');
                 }
 
             } catch (error) {
-                console.error('❌ Error general cargando noticias:', error);
+                console.error('❌ Error general:', error);
                 loadingElement.style.display = 'none';
                 errorElement.style.display = 'block';
-                setTimeout(mostrarNoticiasRespaldo, 3000);
+                
+                apiStatusElement.innerHTML = '❌ Error de conexión - Usando noticias de respaldo';
+                apiStatusElement.className = 'api-status api-error';
+                apiStatusElement.style.display = 'block';
+                
+                setTimeout(() => {
+                    mostrarNoticiasRespaldo();
+                    errorElement.style.display = 'none';
+                }, 3000);
             }
-        }
-
-        async function cargarDesdeNewsAPI() {
-            const sources = [
-                { country: 'us', category: 'general', limit: 5 },
-                { country: 'us', category: 'health', limit: 3 },
-                { country: 'us', category: 'technology', limit: 2 }
-            ];
-
-            let allNews = [];
-
-            for (const source of sources) {
-                const url = `${NEWS_SOURCES[0].baseUrl}?country=${source.country}&category=${source.category}&pageSize=${source.limit}&apiKey=${NEWS_SOURCES[0].apiKey}`;
-                
-                const response = await fetch(url, {
-                    method: 'GET',
-                    headers: {
-                        'Accept': 'application/json'
-                    }
-                });
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                }
-                
-                const data = await response.json();
-                
-                if (data.status === 'ok' && data.articles) {
-                    allNews = [...allNews, ...data.articles];
-                }
-            }
-
-            return allNews.filter(article => article.title && article.description);
-        }
-
-        async function cargarDesdeRSS() {
-            const rssFeeds = NEWS_SOURCES[1].rssFeeds;
-            let allNews = [];
-
-            for (const feedUrl of rssFeeds) {
-                try {
-                    const proxyUrl = `${NEWS_SOURCES[1].baseUrl}?rss_url=${encodeURIComponent(feedUrl)}&api_key=your_api_key&count=5`;
-                    
-                    const response = await fetch(proxyUrl);
-                    if (response.ok) {
-                        const data = await response.json();
-                        if (data.status === 'ok' && data.items) {
-                            const convertedNews = data.items.map(item => ({
-                                title: item.title,
-                                description: item.description || item.content,
-                                url: item.link,
-                                publishedAt: item.pubDate,
-                                source: { name: data.feed.title || 'RSS Feed' },
-                                urlToImage: item.thumbnail
-                            }));
-                            allNews = [...allNews, ...convertedNews];
-                        }
-                    }
-                } catch (error) {
-                    console.log(`Error con RSS feed ${feedUrl}:`, error);
-                }
-            }
-
-            return allNews;
         }
 
         function mostrarNoticias(noticias, fuente) {
             const containerElement = document.getElementById('newsContainer');
             
-            const filteredNews = noticias
+            // Mezclar y limitar noticias
+            const noticiasSeleccionadas = noticias
                 .filter(article => article.title && article.description)
-                .slice(0, 12);
+                .slice(0, 15);
 
             let newsHTML = '';
             
-            filteredNews.forEach((article, index) => {
+            noticiasSeleccionadas.forEach((article, index) => {
                 const publishedDate = new Date(article.publishedAt);
                 const timeAgo = getTimeAgo(publishedDate);
                 const category = getCategoryEmoji(article);
@@ -655,10 +606,7 @@
             });
 
             containerElement.innerHTML = newsHTML;
-            
-            if (fuente && fuente !== 'cache') {
-                console.log(`✅ Noticias cargadas desde: ${fuente}`);
-            }
+            console.log(`✅ Mostrando ${noticiasSeleccionadas.length} noticias de: ${fuente}`);
         }
 
         function getTimeAgo(date) {
@@ -676,18 +624,22 @@
         }
 
         function getCategoryEmoji(article) {
+            const category = article.category || '';
             const title = article.title.toLowerCase();
             const description = (article.description || '').toLowerCase();
             const content = title + ' ' + description;
 
-            if (content.includes('health') || content.includes('medical') || content.includes('doctor')) {
+            if (category === 'entertainment' || content.includes('celebrity') || content.includes('music') || content.includes('movie') || content.includes('actor') || content.includes('singer')) {
+                return '🎬';
+            }
+            if (category === 'sports' || content.includes('sport') || content.includes('game') || content.includes('football') || content.includes('soccer') || content.includes('basketball')) {
+                return '⚽';
+            }
+            if (category === 'health' || content.includes('health') || content.includes('medical') || content.includes('doctor')) {
                 return '🏥';
             }
-            if (content.includes('technology') || content.includes('tech') || content.includes('ai') || content.includes('digital')) {
+            if (category === 'technology' || content.includes('technology') || content.includes('tech') || content.includes('ai') || content.includes('digital')) {
                 return '💻';
-            }
-            if (content.includes('sport') || content.includes('game') || content.includes('football') || content.includes('soccer')) {
-                return '⚽';
             }
             if (content.includes('politics') || content.includes('election') || content.includes('government')) {
                 return '🏛️';
@@ -695,74 +647,56 @@
             if (content.includes('business') || content.includes('economy') || content.includes('finance')) {
                 return '💼';
             }
-            if (content.includes('entertainment') || content.includes('celebrity') || content.includes('music') || content.includes('movie')) {
-                return '🎬';
-            }
             return '📰';
         }
 
         function mostrarNoticiasRespaldo() {
             const noticiasRespaldo = [
                 {
-                    title: "Avances en Tecnología de Lentes Inteligentes para 2025",
-                    description: "Las nuevas lentes con tecnología de realidad aumentada prometen revolucionar la forma en que interactuamos con el mundo digital, ofreciendo funciones como traducción en tiempo real y navegación visual.",
-                    source: { name: "Tech Vision Today" },
-                    publishedAt: new Date().toISOString()
+                    title: "Bad Bunny Anuncia Nuevo Álbum para Finales de 2025",
+                    description: "El reguetonero puertorriqueño confirmó que está trabajando en su próximo proyecto discográfico, que incluirá colaboraciones con artistas internacionales.",
+                    source: { name: "Billboard" },
+                    publishedAt: new Date().toISOString(),
+                    category: 'entertainment'
                 },
                 {
-                    title: "Estudio Revela Aumento del 40% en Problemas de Vista por Pantallas",
-                    description: "Los oftalmólogos reportan un incremento significativo en fatiga visual y sequedad ocular debido al uso excesivo de dispositivos digitales durante el trabajo remoto.",
-                    source: { name: "Health & Vision News" },
-                    publishedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()
+                    title: "Real Madrid Gana Clásico en el Santiago Bernabéu",
+                    description: "Los merengues vencieron al Barcelona en un emocionante encuentro que definió las posiciones en La Liga española.",
+                    source: { name: "Marca" },
+                    publishedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+                    category: 'sports'
                 },
                 {
-                    title: "Nuevas Tendencias en Monturas Sostenibles Dominan el Mercado",
-                    description: "Los diseños eco-friendly y las monturas fabricadas con materiales reciclados están ganando popularidad entre consumidores conscientes del medio ambiente.",
-                    source: { name: "Fashion Optics Weekly" },
-                    publishedAt: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString()
+                    title: "Apple Lanza Nueva Generación de iPhone con IA Avanzada",
+                    description: "La tecnológica estadounidense presenta su smartphone más inteligente hasta la fecha, con capacidades de inteligencia artificial revolucionarias.",
+                    source: { name: "TechCrunch" },
+                    publishedAt: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
+                    category: 'technology'
                 },
                 {
-                    title: "Importancia de Exámenes Oculares Regulares Después de los 40",
-                    description: "Los especialistas recomiendan revisiones anuales para detectar tempranamente condiciones como glaucoma, cataratas y degeneración macular relacionada con la edad.",
-                    source: { name: "Vision Health Today" },
-                    publishedAt: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString()
+                    title: "Descubren Nueva Terapia para Degeneración Macular",
+                    description: "Investigadores desarrollan un tratamiento innovador que podría prevenir la pérdida de visión en millones de personas.",
+                    source: { name: "Medical News Today" },
+                    publishedAt: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
+                    category: 'health'
                 },
                 {
-                    title: "Innovaciones en Lentes de Contacto con Sensores de Salud",
-                    description: "Nuevos lentes de contacto inteligentes pueden monitorear la presión intraocular y niveles de glucosa, revolucionando el cuidado preventivo de la salud.",
-                    source: { name: "MedTech Innovation" },
-                    publishedAt: new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString()
+                    title: "Shakira Confirma Gira Mundial Después de 5 Años",
+                    description: "La cantante colombiana anunció su regreso a los escenarios con una nueva gira que visitará más de 30 países.",
+                    source: { name: "Rolling Stone" },
+                    publishedAt: new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString(),
+                    category: 'entertainment'
+                },
+                {
+                    title: "Breakthrough en Tecnología de Lentes de Contacto Inteligentes",
+                    description: "Nueva generación de lentes puede mostrar información en tiempo real y monitorear la salud ocular continuamente.",
+                    source: { name: "Vision Tech" },
+                    publishedAt: new Date(Date.now() - 10 * 60 * 60 * 1000).toISOString(),
+                    category: 'technology'
                 }
             ];
 
-            const containerElement = document.getElementById('newsContainer');
-            let newsHTML = '';
-            
-            noticiasRespaldo.forEach((article, index) => {
-                const timeAgo = getTimeAgo(new Date(article.publishedAt));
-                const category = getCategoryEmoji(article);
-                const isUrgent = index < 1;
-
-                newsHTML += `
-                    <div class="news-item ${isUrgent ? 'urgent-news' : ''}">
-                        <div class="news-date">${isUrgent ? '🔴 DESTACADO' : '📅'} ${timeAgo}</div>
-                        <div class="news-title">${category} ${article.title}</div>
-                        <div class="news-content">${article.description}</div>
-                        <div class="news-source">📰 ${article.source.name}</div>
-                        <div class="news-actions">
-                            <button class="btn-share-whatsapp" onclick="compartirNoticiaIndividual('${encodeURIComponent(article.title)}', '#', '${encodeURIComponent(article.description)}')">
-                                📱 Compartir
-                            </button>
-                            <button class="btn-read-more" onclick="alert('📰 Esta noticia está disponible solo como resumen.')">
-                                👁️ Resumen
-                            </button>
-                        </div>
-                    </div>
-                `;
-            });
-
-            containerElement.innerHTML = newsHTML;
-            document.getElementById('errorNews').style.display = 'none';
+            mostrarNoticias(noticiasRespaldo, 'Noticias de Respaldo');
         }
 
         function compartirNoticiaIndividual(titulo, url, descripcion) {
@@ -798,6 +732,22 @@
             }
         }
 
+        function forzarActualizacion() {
+            console.log('🔄 Forzando actualización...');
+            // Limpiar cache
+            localStorage.removeItem('urbana_noticias_cache');
+            localStorage.removeItem('urbana_ultima_actualizacion');
+            noticiasCache = [];
+            ultimaActualizacion = '0';
+            
+            const apiStatusElement = document.getElementById('apiStatus');
+            apiStatusElement.innerHTML = '🔄 Actualizando noticias...';
+            apiStatusElement.className = 'api-status api-fallback';
+            apiStatusElement.style.display = 'block';
+            
+            cargarNoticias();
+        }
+
         function consultarPromocion() {
             const mensaje = `🎁 *CONSULTA PROMOCIÓN ESPECIAL*\n\n` +
                           `¡Hola! Vi en InfoFlash la promoción del mes y me interesa:\n\n` +
@@ -819,8 +769,10 @@
             const mensaje = `📰 *INFOFLASH - URBANA VISION*\n\n` +
                           `¡Mantente informado con noticias mundiales en tiempo real!\n\n` +
                           `🌍 Noticias internacionales actualizadas\n` +
-                          `🎁 Promoción especial del mes: 30% descuento + examen gratis\n` +
-                          `💡 Consejos de salud visual diarios\n\n` +
+                          `🎬 Farándula y entretenimiento\n` +
+                          `⚽ Deportes internacionales\n` +
+                          `💻 Tecnología y salud\n` +
+                          `🎁 Promociones especiales\n\n` +
                           `📱 Lee más noticias en nuestro InfoFlash\n` +
                           `☎️ 809-713-5307\n` +
                           `🌐 urbanavision.com\n\n` +
@@ -835,9 +787,10 @@
                           `¡Hola! Me interesa recibir el InfoFlash con noticias en tiempo real.\n\n` +
                           `Por favor, suscríbanme para recibir:\n` +
                           `📰 Noticias mundiales actualizadas\n` +
+                          `🎬 Farándula internacional\n` +
+                          `⚽ Deportes en vivo\n` +
                           `🎁 Promociones especiales\n` +
-                          `💡 Consejos de cuidado ocular\n` +
-                          `📅 Recordatorios de exámenes\n\n` +
+                          `💡 Consejos de cuidado ocular\n\n` +
                           `📱 URBANA VISION\n` +
                           `☎️ 809-713-5307\n` +
                           `🌐 urbanavision.com`;
@@ -864,17 +817,18 @@
 
         // Inicializar
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('🚀 Iniciando InfoFlash URBANA VISION...');
+            console.log('🚀 Iniciando InfoFlash URBANA VISION con API pagada...');
             actualizarFechaHora();
-            setInterval(actualizarFechaHora, 60000); // Actualizar cada minuto
+            setInterval(actualizarFechaHora, 60000);
             
-            // Forzar carga inicial de noticias con delay
-            setTimeout(cargarNoticias, 2000);
-            // Actualizar noticias cada 3 minutos para testing
-            setInterval(cargarNoticias, 180000);
+            // Cargar noticias inmediatamente
+            setTimeout(cargarNoticias, 1000);
+            
+            // Actualizar cada 10 minutos (API pagada permite más requests)
+            setInterval(cargarNoticias, 600000);
         });
 
-        console.log('✅ InfoFlash URBANA VISION con sistema robusto de noticias cargado correctamente');
+        console.log('✅ InfoFlash URBANA VISION - Sistema robusto con API pagada cargado');
     </script>
 </body>
 </html>
